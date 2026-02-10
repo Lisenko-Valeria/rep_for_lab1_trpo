@@ -1,5 +1,1 @@
-<<<<<<< HEAD
 change 6
-=======
-/modification/modification
->>>>>>> 1
