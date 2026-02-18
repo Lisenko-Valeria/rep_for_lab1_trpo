@@ -18,10 +18,10 @@ int main(int argc, char** argv) {
     float *x = x_data;
     float *y = y_data;
     // Массивы тестовых значений
-    int n_values[] = {0, 5, 3, 1, 7};
-    int inc_values[] = {1, 2, -1, 0};
+    int n_values[] = {0, 1,2,3,5};
+    int inc_values[] = {1, 2};
     int num_n = 5;
-    int num_inc = 4;
+    int num_inc = 2;
 
     // Перебор всех комбинаций параметров
     for (int i_n = 0; i_n < num_n; i_n++) {
