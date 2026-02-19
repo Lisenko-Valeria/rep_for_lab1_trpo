@@ -12,11 +12,12 @@
 int main(int argc, char** argv) {
     printf("Тестирование cblas_idamax...\n");
 
-    // Создание тестовых векторов
-    double x_data[] = {1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 10.0};
-    double y_data[] = {10.0, 9.0, 8.0, 7.0, 6.0, 5.0, 4.0, 3.0, 2.0, 1.0};
-    double *x = x_data;
-    double *y = y_data;
+    // Один буфер для всех векторов
+    #define TEST_BUFFER_SIZE  10
+    double test_buffer [TEST_BUFFER_SIZE ];
+    for (int i = 0; i < TEST_BUFFER_SIZE ; i++) {
+        test_buffer [i] = (double)(i + 1);
+    }
     // Массивы тестовых значений
     int n_values[] = {0, 1,2,3,5};
     int inc_values[] = {1, 2};
@@ -29,7 +30,7 @@ int main(int argc, char** argv) {
         for (int i_inc = 0; i_inc < num_inc; i_inc++) {
             int inc = inc_values[i_inc];
                 // Вызов функции
-                cblas_idamax(n, (const double*)x_data, inc);
+                cblas_idamax(n, (const double*)test_buffer, inc);
         }
     }
 

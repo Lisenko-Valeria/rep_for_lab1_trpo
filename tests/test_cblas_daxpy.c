@@ -12,11 +12,12 @@
 int main(int argc, char** argv) {
     printf("Тестирование cblas_daxpy...\n");
 
-    // Создание тестовых векторов
-    double x_data[] = {1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 10.0};
-    double y_data[] = {10.0, 9.0, 8.0, 7.0, 6.0, 5.0, 4.0, 3.0, 2.0, 1.0};
-    double *x = x_data;
-    double *y = y_data;
+    // Один буфер для всех векторов
+    #define TEST_BUFFER_SIZE  10
+    double test_buffer [TEST_BUFFER_SIZE ];
+    for (int i = 0; i < TEST_BUFFER_SIZE ; i++) {
+        test_buffer [i] = (double)(i + 1);
+    }
     // Массивы тестовых значений
     double alpha_values[] = {0.0, 1.0, -2.5, 0.5, 3.0};
     int num_alphas = 5;
@@ -33,7 +34,7 @@ int main(int argc, char** argv) {
             for (int i_alpha = 0; i_alpha < num_alphas; i_alpha++) {
                 double alpha = alpha_values[i_alpha];
                 // Вызов функции
-                cblas_daxpy(n, alpha, (const double*)x_data, inc, y_data, inc);
+                cblas_daxpy(n, alpha, (const double*)test_buffer, inc, test_buffer, inc);
             }
         }
     }

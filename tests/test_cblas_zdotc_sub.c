@@ -12,19 +12,12 @@
 int main(int argc, char** argv) {
     printf("Тестирование cblas_zdotc_sub...\n");
 
-    // Создание тестовых векторов (комплексные)
-    double complex x_data[] = {1.0+1.0*I, 2.0+2.0*I, 
-                             3.0+3.0*I, 4.0+4.0*I,
-                             5.0+5.0*I, 6.0+6.0*I,
-                             7.0+7.0*I, 8.0+8.0*I,
-                             9.0+9.0*I, 10.0+10.0*I};
-    double complex y_data[] = {10.0+10.0*I, 9.0+9.0*I,
-                             8.0+8.0*I, 7.0+7.0*I,
-                             6.0+6.0*I, 5.0+5.0*I,
-                             4.0+4.0*I, 3.0+3.0*I,
-                             2.0+2.0*I, 1.0+1.0*I};
-    double complex *x = x_data;
-    double complex *y = y_data;
+    // Один буфер для всех векторов
+    #define TEST_BUFFER_SIZE  10
+    double complex test_buffer [TEST_BUFFER_SIZE ];
+    for (int i = 0; i < TEST_BUFFER_SIZE ; i++) {
+        test_buffer [i] = (i+1) + (i+1)*I;
+    }
 
     double complex result_dotu, result_dotc;
     // Массивы тестовых значений
@@ -39,7 +32,7 @@ int main(int argc, char** argv) {
         for (int i_inc = 0; i_inc < num_inc; i_inc++) {
             int inc = inc_values[i_inc];
                 // Вызов функции
-                cblas_zdotc_sub(n, (const double complex*)x_data, inc, (const double complex*)y_data, inc, &result_dotc);
+                cblas_zdotc_sub(n, (const double complex*)test_buffer, inc, (const double complex*)test_buffer, inc, &result_dotc);
         }
     }
 

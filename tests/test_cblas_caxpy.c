@@ -12,19 +12,12 @@
 int main(int argc, char** argv) {
     printf("Тестирование cblas_caxpy...\n");
 
-    // Создание тестовых векторов (комплексные)
-    float complex x_data[] = {1.0f+1.0f*I, 2.0f+2.0f*I, 
-                             3.0f+3.0f*I, 4.0f+4.0f*I,
-                             5.0f+5.0f*I, 6.0f+6.0f*I,
-                             7.0f+7.0f*I, 8.0f+8.0f*I,
-                             9.0f+9.0f*I, 10.0f+10.0f*I};
-    float complex y_data[] = {10.0f+10.0f*I, 9.0f+9.0f*I,
-                             8.0f+8.0f*I, 7.0f+7.0f*I,
-                             6.0f+6.0f*I, 5.0f+5.0f*I,
-                             4.0f+4.0f*I, 3.0f+3.0f*I,
-                             2.0f+2.0f*I, 1.0f+1.0f*I};
-    float complex *x = x_data;
-    float complex *y = y_data;
+    // Один буфер для всех векторов
+    #define TEST_BUFFER_SIZE  10
+    float complex test_buffer [TEST_BUFFER_SIZE ];
+    for (int i = 0; i < TEST_BUFFER_SIZE ; i++) {
+        test_buffer [i] = (i+1) + (i+1)*I;
+    }
     // Массивы тестовых значений
     float alpha_values[] = {0.0f, 1.0f, -2.5f, 0.5f, 3.0f};
     int num_alphas = 5;
@@ -41,7 +34,7 @@ int main(int argc, char** argv) {
             for (int i_alpha = 0; i_alpha < num_alphas; i_alpha++) {
                 float complex alpha = alpha_values[i_alpha] + alpha_values[i_alpha]*I;
                 // Вызов функции
-                cblas_caxpy(n, &alpha, (const float complex*)x_data, inc, y_data, inc);
+                cblas_caxpy(n, &alpha, (const float complex*)test_buffer, inc, test_buffer, inc);
             }
         }
     }

@@ -14,11 +14,12 @@ int main(int argc, char** argv) {
 
     float a_val = 1.0f, b_val = 2.0f, c_val = 0.5f, s_val = 0.5f;
     float d1_val = 1.0f, d2_val = 2.0f, b1_val = 3.0f, P_param[5] = {1.0f, 2.0f, 3.0f, 4.0f, 5.0f};
-    // Создание тестовых векторов
-    float x_data[] = {1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 10.0};
-    float y_data[] = {10.0, 9.0, 8.0, 7.0, 6.0, 5.0, 4.0, 3.0, 2.0, 1.0};
-    float *x = x_data;
-    float *y = y_data;
+    // Один буфер для всех векторов
+    #define TEST_BUFFER_SIZE  10
+    float test_buffer [TEST_BUFFER_SIZE ];
+    for (int i = 0; i < TEST_BUFFER_SIZE ; i++) {
+        test_buffer [i] = (float)(i + 1);
+    }
     // Массивы тестовых значений
     int n_values[] = {0, 1,2,3,5};
     int inc_values[] = {1, 2};

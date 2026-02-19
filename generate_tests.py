@@ -1,248 +1,234 @@
-#!/usr/bin/env python3
-"""
-Генератор интерфейсных тестов для CBLAS Level 1.
-Создает для каждой функции отдельный файл test_<func>.c с тестами.
-Все файлы создаются в директории tests/
-"""
-
 import os
 import shutil
 from dataclasses import dataclass
 from typing import List, Tuple, Optional
 
-# ============================================================================
-# Описание функций CBLAS для генерации тестов
-# ============================================================================
-
 @dataclass
-class CBLASFunction:
-    """Описание функции CBLAS для генерации теста"""
-    name: str                     # имя функции (например, "cblas_saxpy")
-    return_type: str              # тип возвращаемого значения
-    arg_types: List[str]          # список типов аргументов
-    arg_names: List[str]          # список имен аргументов
+class function:
+    name: str             
+    return_type: str          
+    arg_types: List[str]         
+    arg_names: List[str]        
     is_complex: bool = False       # флаг комплексной функции
     is_return_void: bool = True    # функция возвращает void?
     precision: str = "s"           # s/d/c/z/cs/zd/sc/dz/sds/ds
 
-# Список всех функций Level 1 CBLAS из заголовочного файла
 FUNCTIONS = [
-    # Функции с возвращаемым значением (dot, nrm2, asum, i_amax)
-    CBLASFunction("cblas_sdsdot", "float", 
+    function("cblas_sdsdot", "float", 
                   ["int", "float", "const float*", "int", "const float*", "int"],
                   ["N", "alpha", "X", "incX", "Y", "incY"],
                   is_return_void=False, precision="sds"),
-    CBLASFunction("cblas_dsdot", "double",
+    function("cblas_dsdot", "double",
                   ["int", "const float*", "int", "const float*", "int"],
                   ["N", "X", "incX", "Y", "incY"],
                   is_return_void=False, precision="ds"),
-    CBLASFunction("cblas_sdot", "float",
+    function("cblas_sdot", "float",
                   ["int", "const float*", "int", "const float*", "int"],
                   ["N", "X", "incX", "Y", "incY"],
                   is_return_void=False, precision="s"),
-    CBLASFunction("cblas_ddot", "double",
+    function("cblas_ddot", "double",
                   ["int", "const double*", "int", "const double*", "int"],
                   ["N", "X", "incX", "Y", "incY"],
                   is_return_void=False, precision="d"),
-    CBLASFunction("cblas_cdotu_sub", "void",
+    # Functions having prefixes Z and C only
+    function("cblas_cdotu_sub", "void",
                   ["int", "const void*", "int", "const void*", "int", "void*"],
                   ["N", "X", "incX", "Y", "incY", "dotu"],
                   is_complex=True, precision="c"),
-    CBLASFunction("cblas_cdotc_sub", "void",
+    function("cblas_cdotc_sub", "void",
                   ["int", "const void*", "int", "const void*", "int", "void*"],
                   ["N", "X", "incX", "Y", "incY", "dotc"],
                   is_complex=True, precision="c"),
-    CBLASFunction("cblas_zdotu_sub", "void",
+    function("cblas_zdotu_sub", "void",
                   ["int", "const void*", "int", "const void*", "int", "void*"],
                   ["N", "X", "incX", "Y", "incY", "dotu"],
                   is_complex=True, precision="z"),
-    CBLASFunction("cblas_zdotc_sub", "void",
+    function("cblas_zdotc_sub", "void",
                   ["int", "const void*", "int", "const void*", "int", "void*"],
                   ["N", "X", "incX", "Y", "incY", "dotc"],
                   is_complex=True, precision="z"),
-    CBLASFunction("cblas_snrm2", "float",
+    #Functions having prefixes S D SC DZ
+    function("cblas_snrm2", "float",
                   ["int", "const float*", "int"],
                   ["N", "X", "incX"],
                   is_return_void=False, precision="s"),
-    CBLASFunction("cblas_sasum", "float",
+    function("cblas_sasum", "float",
                   ["int", "const float*", "int"],
                   ["N", "X", "incX"],
                   is_return_void=False, precision="s"),
-    CBLASFunction("cblas_dnrm2", "double",
+    function("cblas_dnrm2", "double",
                   ["int", "const double*", "int"],
                   ["N", "X", "incX"],
                   is_return_void=False, precision="d"),
-    CBLASFunction("cblas_dasum", "double",
+    function("cblas_dasum", "double",
                   ["int", "const double*", "int"],
                   ["N", "X", "incX"],
                   is_return_void=False, precision="d"),
-    CBLASFunction("cblas_scnrm2", "float",
+    function("cblas_scnrm2", "float",
                   ["int", "const void*", "int"],
                   ["N", "X", "incX"],
                   is_complex=True, is_return_void=False, precision="sc"),
-    CBLASFunction("cblas_scasum", "float",
+    function("cblas_scasum", "float",
                   ["int", "const void*", "int"],
                   ["N", "X", "incX"],
                   is_complex=True, is_return_void=False, precision="sc"),
-    CBLASFunction("cblas_dznrm2", "double",
+    function("cblas_dznrm2", "double",
                   ["int", "const void*", "int"],
                   ["N", "X", "incX"],
                   is_complex=True, is_return_void=False, precision="dz"),
-    CBLASFunction("cblas_dzasum", "double",
+    function("cblas_dzasum", "double",
                   ["int", "const void*", "int"],
                   ["N", "X", "incX"],
                   is_complex=True, is_return_void=False, precision="dz"),
-    CBLASFunction("cblas_isamax", "CBLAS_INDEX",
+    #Functions having standard 4 prefixes (S D C Z)
+    function("cblas_isamax", "CBLAS_INDEX",
                   ["int", "const float*", "int"],
                   ["N", "X", "incX"],
                   is_return_void=False, precision="s"),
-    CBLASFunction("cblas_idamax", "CBLAS_INDEX",
+    function("cblas_idamax", "CBLAS_INDEX",
                   ["int", "const double*", "int"],
                   ["N", "X", "incX"],
                   is_return_void=False, precision="d"),
-    CBLASFunction("cblas_icamax", "CBLAS_INDEX",
+    function("cblas_icamax", "CBLAS_INDEX",
                   ["int", "const void*", "int"],
                   ["N", "X", "incX"],
                   is_complex=True, is_return_void=False, precision="c"),
-    CBLASFunction("cblas_izamax", "CBLAS_INDEX",
+    function("cblas_izamax", "CBLAS_INDEX",
                   ["int", "const void*", "int"],
                   ["N", "X", "incX"],
                   is_complex=True, is_return_void=False, precision="z"),
-    CBLASFunction("cblas_crotg", "void",
-                  ["void*", "void*", "float*", "void*"],
-                  ["a", "b", "c", "s"],
-                  is_complex=True, precision="c"),
-    CBLASFunction("cblas_zrotg", "void",
-                  ["void*", "void*", "double*", "void*"],
-                  ["a", "b", "c", "s"],
-                  is_complex=True, precision="z"),
     
-    # Функции swap, copy, axpy
-    CBLASFunction("cblas_sswap", "void",
+    # Routines with standard 4 prefixes (s, d, c, z)
+    function("cblas_sswap", "void",
                   ["int", "float*", "int", "float*", "int"],
                   ["N", "X", "incX", "Y", "incY"],
                   precision="s"),
-    CBLASFunction("cblas_scopy", "void",
+    function("cblas_scopy", "void",
                   ["int", "const float*", "int", "float*", "int"],
                   ["N", "X", "incX", "Y", "incY"],
                   precision="s"),
-    CBLASFunction("cblas_saxpy", "void",
+    function("cblas_saxpy", "void",
                   ["int", "float", "const float*", "int", "float*", "int"],
                   ["N", "alpha", "X", "incX", "Y", "incY"],
                   precision="s"),
-    CBLASFunction("cblas_dswap", "void",
+    function("cblas_dswap", "void",
                   ["int", "double*", "int", "double*", "int"],
                   ["N", "X", "incX", "Y", "incY"],
                   precision="d"),
-    CBLASFunction("cblas_dcopy", "void",
+    function("cblas_dcopy", "void",
                   ["int", "const double*", "int", "double*", "int"],
                   ["N", "X", "incX", "Y", "incY"],
                   precision="d"),
-    CBLASFunction("cblas_daxpy", "void",
+    function("cblas_daxpy", "void",
                   ["int", "double", "const double*", "int", "double*", "int"],
                   ["N", "alpha", "X", "incX", "Y", "incY"],
                   precision="d"),
-    CBLASFunction("cblas_cswap", "void",
+    function("cblas_cswap", "void",
                   ["int", "void*", "int", "void*", "int"],
                   ["N", "X", "incX", "Y", "incY"],
                   is_complex=True, precision="c"),
-    CBLASFunction("cblas_ccopy", "void",
+    function("cblas_ccopy", "void",
                   ["int", "const void*", "int", "void*", "int"],
                   ["N", "X", "incX", "Y", "incY"],
                   is_complex=True, precision="c"),
-    CBLASFunction("cblas_caxpy", "void",
+    function("cblas_caxpy", "void",
                   ["int", "const void*", "const void*", "int", "void*", "int"],
                   ["N", "alpha", "X", "incX", "Y", "incY"],
                   is_complex=True, precision="c"),
-    CBLASFunction("cblas_zswap", "void",
+    function("cblas_zswap", "void",
                   ["int", "void*", "int", "void*", "int"],
                   ["N", "X", "incX", "Y", "incY"],
                   is_complex=True, precision="z"),
-    CBLASFunction("cblas_zcopy", "void",
+    function("cblas_zcopy", "void",
                   ["int", "const void*", "int", "void*", "int"],
                   ["N", "X", "incX", "Y", "incY"],
                   is_complex=True, precision="z"),
-    CBLASFunction("cblas_zaxpy", "void",
+    function("cblas_zaxpy", "void",
                   ["int", "const void*", "const void*", "int", "void*", "int"],
                   ["N", "alpha", "X", "incX", "Y", "incY"],
                   is_complex=True, precision="z"),
     
-    # Функции rotg, rotmg, rot, rotm
-    CBLASFunction("cblas_srotg", "void",
+    #Routines with S and D prefix only
+    function("cblas_srotg", "void",
                   ["float*", "float*", "float*", "float*"],
                   ["a", "b", "c", "s"],
                   precision="s"),
-    CBLASFunction("cblas_srotmg", "void",
+    function("cblas_srotmg", "void",
                   ["float*", "float*", "float*", "float", "float*"],
                   ["d1", "d2", "b1", "b2", "P"],
                   precision="s"),
-    CBLASFunction("cblas_srot", "void",
+    function("cblas_srot", "void",
                   ["int", "float*", "int", "float*", "int", "float", "float"],
                   ["N", "X", "incX", "Y", "incY", "c", "s"],
                   precision="s"),
-    CBLASFunction("cblas_srotm", "void",
+    function("cblas_srotm", "void",
                   ["int", "float*", "int", "float*", "int", "const float*"],
                   ["N", "X", "incX", "Y", "incY", "P"],
                   precision="s"),
-    CBLASFunction("cblas_drotg", "void",
+    function("cblas_drotg", "void",
                   ["double*", "double*", "double*", "double*"],
                   ["a", "b", "c", "s"],
                   precision="d"),
-    CBLASFunction("cblas_drotmg", "void",
+    function("cblas_drotmg", "void",
                   ["double*", "double*", "double*", "double", "double*"],
                   ["d1", "d2", "b1", "b2", "P"],
                   precision="d"),
-    CBLASFunction("cblas_drot", "void",
+    function("cblas_drot", "void",
                   ["int", "double*", "int", "double*", "int", "double", "double"],
                   ["N", "X", "incX", "Y", "incY", "c", "s"],
                   precision="d"),
-    CBLASFunction("cblas_drotm", "void",
+    function("cblas_drotm", "void",
                   ["int", "double*", "int", "double*", "int", "const double*"],
                   ["N", "X", "incX", "Y", "incY", "P"],
                   precision="d"),
-    CBLASFunction("cblas_csrot", "void",
+    #extra 4 
+    function("cblas_crotg", "void",
+                  ["void*", "void*", "float*", "void*"],
+                  ["a", "b", "c", "s"],
+                  is_complex=True, precision="c"),
+    function("cblas_zrotg", "void",
+                  ["void*", "void*", "double*", "void*"],
+                  ["a", "b", "c", "s"],
+                  is_complex=True, precision="z"),
+    function("cblas_csrot", "void",
                 ["int", "void*", "int", "void*", "int", "float", "float"],
                 ["N", "X", "incX", "Y", "incY", "c", "s"],
                 is_complex=True, precision="cs"),
 
-    CBLASFunction("cblas_zdrot", "void",
+    function("cblas_zdrot", "void",
                 ["int", "void*", "int", "void*", "int", "double", "double"],
                 ["N", "X", "incX", "Y", "incY", "c", "s"],
                 is_complex=True, precision="zd"),
     
-    # Функции scal
-    CBLASFunction("cblas_sscal", "void",
+    #outines with S D C Z CS and ZD prefixes
+    function("cblas_sscal", "void",
                   ["int", "float", "float*", "int"],
                   ["N", "alpha", "X", "incX"],
                   precision="s"),
-    CBLASFunction("cblas_dscal", "void",
+    function("cblas_dscal", "void",
                   ["int", "double", "double*", "int"],
                   ["N", "alpha", "X", "incX"],
                   precision="d"),
-    CBLASFunction("cblas_cscal", "void",
+    function("cblas_cscal", "void",
                   ["int", "const void*", "void*", "int"],
                   ["N", "alpha", "X", "incX"],
                   is_complex=True, precision="c"),
-    CBLASFunction("cblas_zscal", "void",
+    function("cblas_zscal", "void",
                   ["int", "const void*", "void*", "int"],
                   ["N", "alpha", "X", "incX"],
                   is_complex=True, precision="z"),
-    CBLASFunction("cblas_csscal", "void",
+    function("cblas_csscal", "void",
                   ["int", "float", "void*", "int"],
                   ["N", "alpha", "X", "incX"],
                   is_complex=True, precision="cs"),
-    CBLASFunction("cblas_zdscal", "void",
+    function("cblas_zdscal", "void",
                   ["int", "double", "void*", "int"],
                   ["N", "alpha", "X", "incX"],
                   is_complex=True, precision="zd"),
     
 ]
 
-# ============================================================================
-# Шаблоны для генерации кода
-# ============================================================================
-
-HEADER_TEMPLATE = """\
+TEMPLATE = """\
 #include <stdio.h>
 #include <stdlib.h>
 #include <math.h>
@@ -287,52 +273,46 @@ def get_base_type_from_precision(precision: str) -> str:
     return "float"
 
 def generate_vector_declaration(func: CBLASFunction) -> str:
-    """Генерирует объявление векторов для теста"""
+    """Генерирует минимальные данные для тестирования - один буфер на всё"""
     if func.precision in ["s", "d", "sds", "ds"]:
-        base_type = "float" if func.precision in ["s", "sds", "ds"] else "double"
+        if func.precision in ["s", "sds", "ds"] 
+            base_type = "float" 
+        else base_type = "double"
         return f"""\
-    // Создание тестовых векторов
-    {base_type} x_data[] = {{1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 10.0}};
-    {base_type} y_data[] = {{10.0, 9.0, 8.0, 7.0, 6.0, 5.0, 4.0, 3.0, 2.0, 1.0}};
-    {base_type} *x = x_data;
-    {base_type} *y = y_data;"""
+
+                    #define TEST_BUFFER_SIZE  10
+                    {base_type} test_buffer [TEST_BUFFER_SIZE];
+                    for (int i = 0; i < TEST_BUFFER_SIZE ; i++) {{
+                        test_buffer [i] = ({base_type})(i + 1);
+                    }}"""
     else:
         # Комплексные типы
         if func.precision in ["c", "sc", "cs"]:
             base_type = "float complex"
-            suffix = "f"
+
         else:  # "z", "dz", "zd"
             base_type = "double complex"
-            suffix = ""
         
         return f"""\
-    // Создание тестовых векторов (комплексные)
-    {base_type} x_data[] = {{1.0{suffix}+1.0{suffix}*I, 2.0{suffix}+2.0{suffix}*I, 
-                             3.0{suffix}+3.0{suffix}*I, 4.0{suffix}+4.0{suffix}*I,
-                             5.0{suffix}+5.0{suffix}*I, 6.0{suffix}+6.0{suffix}*I,
-                             7.0{suffix}+7.0{suffix}*I, 8.0{suffix}+8.0{suffix}*I,
-                             9.0{suffix}+9.0{suffix}*I, 10.0{suffix}+10.0{suffix}*I}};
-    {base_type} y_data[] = {{10.0{suffix}+10.0{suffix}*I, 9.0{suffix}+9.0{suffix}*I,
-                             8.0{suffix}+8.0{suffix}*I, 7.0{suffix}+7.0{suffix}*I,
-                             6.0{suffix}+6.0{suffix}*I, 5.0{suffix}+5.0{suffix}*I,
-                             4.0{suffix}+4.0{suffix}*I, 3.0{suffix}+3.0{suffix}*I,
-                             2.0{suffix}+2.0{suffix}*I, 1.0{suffix}+1.0{suffix}*I}};
-    {base_type} *x = x_data;
-    {base_type} *y = y_data;"""
 
-def generate_test_cases(func: CBLASFunction) -> str:
+                    #define TEST_BUFFER_SIZE  10
+                    {base_type} test_buffer [TEST_BUFFER_SIZE ];
+                    for (int i = 0; i < TEST_BUFFER_SIZE ; i++) {{
+                        test_buffer [i] = (i+1) + (i+1)*I;
+                    }}"""
+
+def generate_test_cases(func: function) -> str:
     """Генерирует код с тестовыми случаями"""
     lines = []
     
     # Определение базового типа
     base_type = get_base_type_from_precision(func.precision)
-    base_type_str = "float" if "float" in str(base_type) else "double"
     
     # Массивы тестовых значений
     lines.append("    // Массивы тестовых значений")
     
     if "alpha" in func.arg_names:
-        if base_type_str == "float":
+        if base_type == "float":
             lines.append("    float alpha_values[] = {0.0f, 1.0f, -2.5f, 0.5f, 3.0f};")
             lines.append("    int num_alphas = 5;")
         else:
@@ -354,7 +334,7 @@ def generate_test_cases(func: CBLASFunction) -> str:
     # Вложенные циклы для alpha, если есть
     if "alpha" in func.arg_names and func.name not in ["cblas_caxpy", "cblas_zaxpy"]:
         lines.append("            for (int i_alpha = 0; i_alpha < num_alphas; i_alpha++) {")
-        if base_type_str == "float":
+        if base_type == "float":
             lines.append("                float alpha = alpha_values[i_alpha];")
         else:
             lines.append("                double alpha = alpha_values[i_alpha];")
@@ -383,10 +363,13 @@ def generate_test_cases(func: CBLASFunction) -> str:
             else:
                 args.append("alpha")
         elif arg_name in ["X", "Y"]:
-            if "const" in arg_type:
-                args.append(f"(const {base_type}*){arg_name.lower()}_data")
+            if func.name == "cblas_dsdot":
+                # dsdot требует float*, а не double*
+                args.append(f"(const float*)test_buffer")
+            elif "const" in arg_type:
+                args.append(f"(const {base_type}*)test_buffer")
             else:
-                args.append(f"{arg_name.lower()}_data")
+                args.append(f"test_buffer")
                 # Для rotg/rotmg функций
         elif arg_name in ["a", "b", "d1", "d2", "b1"]:
             if arg_type.endswith('*'):
@@ -415,7 +398,7 @@ def generate_test_cases(func: CBLASFunction) -> str:
             result_var = "result_" + arg_name
             args.append(f"&{result_var}")
         elif arg_name == "b2":
-            if base_type_str == "float":
+            if base_type == "float":
                 args.append("2.0f")
             else:
                 args.append("2.0")
@@ -433,7 +416,7 @@ def generate_test_cases(func: CBLASFunction) -> str:
     
     return "\n".join(lines)
 
-def generate_test_file(func: CBLASFunction) -> str:
+def generate_test_file(func: function) -> str:
     """Генерирует полный код тестового файла для одной функции"""
     content = []
     

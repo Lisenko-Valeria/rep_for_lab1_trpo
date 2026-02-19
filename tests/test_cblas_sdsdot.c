@@ -12,11 +12,12 @@
 int main(int argc, char** argv) {
     printf("Тестирование cblas_sdsdot...\n");
 
-    // Создание тестовых векторов
-    float x_data[] = {1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 10.0};
-    float y_data[] = {10.0, 9.0, 8.0, 7.0, 6.0, 5.0, 4.0, 3.0, 2.0, 1.0};
-    float *x = x_data;
-    float *y = y_data;
+    // Один буфер для всех векторов
+    #define TEST_BUFFER_SIZE  10
+    float test_buffer [TEST_BUFFER_SIZE ];
+    for (int i = 0; i < TEST_BUFFER_SIZE ; i++) {
+        test_buffer [i] = (float)(i + 1);
+    }
     // Массивы тестовых значений
     float alpha_values[] = {0.0f, 1.0f, -2.5f, 0.5f, 3.0f};
     int num_alphas = 5;
@@ -33,7 +34,7 @@ int main(int argc, char** argv) {
             for (int i_alpha = 0; i_alpha < num_alphas; i_alpha++) {
                 float alpha = alpha_values[i_alpha];
                 // Вызов функции
-                cblas_sdsdot(n, alpha, (const float*)x_data, inc, (const float*)y_data, inc);
+                cblas_sdsdot(n, alpha, (const float*)test_buffer, inc, (const float*)test_buffer, inc);
             }
         }
     }
