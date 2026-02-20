@@ -2,6 +2,8 @@ CC = gcc
 CFLAGS = -Wall -O2 -g -I../OpenBLAS
 LDFLAGS = -L../OpenBLAS -lopenblas -lm
 
+#LDFLAGS = -L../Wrong_OpenBLAS -lwrongblas -lm
+
 # Все тестовые программы (ищем в текущей директории)
 SOURCES = $(wildcard test_*.c)
 TARGETS = $(SOURCES:.c=)

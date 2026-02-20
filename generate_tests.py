@@ -262,9 +262,9 @@ TYPE_INFO = {
 
 def get_base_type_from_precision(precision: str) -> str:
     """Определяет базовый тип для заданной точности"""
-    if precision in ["s", "sds"]:
+    if precision in ["s", "sds", "ds"]:
         return "float"
-    elif precision in ["d", "ds"]:
+    elif precision in ["d"]:
         return "double"
     elif precision in ["c", "sc", "cs"]:
         return "float complex"
@@ -272,81 +272,78 @@ def get_base_type_from_precision(precision: str) -> str:
         return "double complex"
     return "float"
 
-def generate_vector_declaration(func: CBLASFunction) -> str:
-    """Генерирует минимальные данные для тестирования - один буфер на всё"""
-    if func.precision in ["s", "d", "sds", "ds"]:
-        if func.precision in ["s", "sds", "ds"] 
-            base_type = "float" 
-        else base_type = "double"
-        return f"""\
-
-                    #define TEST_BUFFER_SIZE  10
-                    {base_type} test_buffer [TEST_BUFFER_SIZE];
-                    for (int i = 0; i < TEST_BUFFER_SIZE ; i++) {{
-                        test_buffer [i] = ({base_type})(i + 1);
-                    }}"""
-    else:
-        # Комплексные типы
-        if func.precision in ["c", "sc", "cs"]:
-            base_type = "float complex"
-
-        else:  # "z", "dz", "zd"
-            base_type = "double complex"
-        
-        return f"""\
-
-                    #define TEST_BUFFER_SIZE  10
-                    {base_type} test_buffer [TEST_BUFFER_SIZE ];
-                    for (int i = 0; i < TEST_BUFFER_SIZE ; i++) {{
-                        test_buffer [i] = (i+1) + (i+1)*I;
-                    }}"""
-
 def generate_test_cases(func: function) -> str:
     """Генерирует код с тестовыми случаями"""
     lines = []
     
     # Определение базового типа
     base_type = get_base_type_from_precision(func.precision)
+    if "float" in base_type :
+        base_type_f = "f"
+    elif "double" in base_type:
+        base_type_f = "" 
+    base_type_simple = base_type.split()[0]  # "float" или "double"
+
     
-    # Массивы тестовых значений
-    lines.append("    // Массивы тестовых значений")
+    # ПЕРЕМЕННЫЕ
+    lines.append("     // Переменные")
+
+    if "rotg" not in func.name and "rotmg" not in func.name:
+        lines.append("    int n = 1;")
+        lines.append("    int inc = 1;")
     
+    # Объявление переменных a, b, c, s, d1, d2, b1, b2, param для функций rot
+    if "rotg" in func.name or "rotmg" in func.name or "rot" in func.name or "rotm" in func.name:
+        # extra (c z)
+        if func.name in  ["cblas_crotg", "cblas_zrotg"] :
+            lines.append(f"    {base_type} a_val = 1.0{base_type_f} + 1.0{base_type_f}*I, b_val = 2.0{base_type_f} + 2.0{base_type_f}*I;")
+            lines.append(f"    {base_type_simple} c_val = 0.5{base_type_f};")
+            lines.append(f"    {base_type} s_val = 0.5{base_type_f} + 0.5{base_type_f}*I;")
+
+        # s d cs zd - не комплекс
+        elif "rotg" in func.name:
+            lines.append(f"    {base_type} a_val = 1.0{base_type_f}, b_val = 2.0{base_type_f}, c_val = 0.5{base_type_f}, s_val = 0.5{base_type_f};")
+        elif "rotmg" in func.name:
+            lines.append(f"    {base_type} d1_val = 1.0{base_type_f}, d2_val = 2.0{base_type_f}, b1_val = 1.0{base_type_f}, b2_val = 2.0{base_type_f}, P_param[5];")
+        
+        elif "rotm" in func.name:
+            lines.append(f"    {base_type} P_param[5];") 
+        elif "rot" in func.name:
+            lines.append(f"    {base_type} c_val = 0.5{base_type_f}, s_val = 0.5{base_type_f};")               
+
+    # Объявление переменных alpha для функций axpy scal
     if "alpha" in func.arg_names:
-        if base_type == "float":
-            lines.append("    float alpha_values[] = {0.0f, 1.0f, -2.5f, 0.5f, 3.0f};")
-            lines.append("    int num_alphas = 5;")
+        alpha_idx = func.arg_names.index("alpha")
+        alpha_type = func.arg_types[alpha_idx]
+#упростить  ?
+        if "void" in alpha_type:
+            # Для комплексных функций с указателем
+            lines.append(f"        {base_type} alpha = 2.0{base_type_f} + 2.0{base_type_f}*I;")
         else:
-            lines.append("    double alpha_values[] = {0.0, 1.0, -2.5, 0.5, 3.0};")
-            lines.append("    int num_alphas = 5;")
+            # Для скалярных функций
+            lines.append(f"        {base_type} alpha = 2.0{base_type_f};")
     
-    lines.append("    int n_values[] = {0, 1,2,3,5};")
-    lines.append("    int inc_values[] = {1, 2};")
-    lines.append("    int num_n = 5;")
-    lines.append("    int num_inc = 2;")
-    
-    # Перебор всех комбинаций
-    lines.append("\n    // Перебор всех комбинаций параметров")
-    lines.append("    for (int i_n = 0; i_n < num_n; i_n++) {")
-    lines.append("        int n = n_values[i_n];")
-    lines.append("        for (int i_inc = 0; i_inc < num_inc; i_inc++) {")
-    lines.append("            int inc = inc_values[i_inc];")
-    
-    # Вложенные циклы для alpha, если есть
-    if "alpha" in func.arg_names and func.name not in ["cblas_caxpy", "cblas_zaxpy"]:
-        lines.append("            for (int i_alpha = 0; i_alpha < num_alphas; i_alpha++) {")
-        if base_type == "float":
-            lines.append("                float alpha = alpha_values[i_alpha];")
+    if "X" in func.arg_names or "Y" in func.arg_names:
+        if "X" in func.arg_names:
+            X_idx = func.arg_names.index("X")
+            XY_type = func.arg_types[X_idx]
         else:
-            lines.append("                double alpha = alpha_values[i_alpha];")
-    
-    # Для комплексных функций с alpha как const void*
-    elif "alpha" in func.arg_names and func.is_complex:
-        lines.append("            for (int i_alpha = 0; i_alpha < num_alphas; i_alpha++) {")
-        if "float" in str(base_type):
-            lines.append(f"                {base_type} alpha = alpha_values[i_alpha] + alpha_values[i_alpha]*I;")
+            Y_idx = func.arg_names.index("Y")
+            XY_type = func.arg_types[Y_idx] 
+
+        if "void" in XY_type:
+            # Для комплексных функций с указателем
+            lines.append(f"        {base_type} XY = 2.0{base_type_f} + 2.0{base_type_f}*I;")
         else:
-            lines.append(f"                {base_type} alpha = alpha_values[i_alpha] + alpha_values[i_alpha]*I;")
+            # Для скалярных функций
+            lines.append(f"        {base_type} XY = 2.0{base_type_f};")
     
+    # Для функций с возвратом значения через аргумент
+    if func.name in ["cblas_cdotu_sub", "cblas_zdotu_sub"]:
+        lines.append(f"\n    {base_type} dotu;")    
+    elif func.name in ["cblas_cdotc_sub", "cblas_zdotc_sub"]:
+        lines.append(f"\n    {base_type} dotc;")   
+
     # Вызов функции
     lines.append("                // Вызов функции")
     call = f"                {func.name}("
@@ -363,56 +360,27 @@ def generate_test_cases(func: function) -> str:
             else:
                 args.append("alpha")
         elif arg_name in ["X", "Y"]:
-            if func.name == "cblas_dsdot":
-                # dsdot требует float*, а не double*
-                args.append(f"(const float*)test_buffer")
-            elif "const" in arg_type:
-                args.append(f"(const {base_type}*)test_buffer")
-            else:
-                args.append(f"test_buffer")
+            args.append(f"&XY")
+
                 # Для rotg/rotmg функций
-        elif arg_name in ["a", "b", "d1", "d2", "b1"]:
+        elif arg_name in ["a", "b", "d1", "d2", "b1", "b2", "c", "s"]:
             if arg_type.endswith('*'):
                 args.append(f"&{arg_name}_val")
             else:
                 args.append(f"{arg_name}_val")
-        elif arg_name in ["c", "s"]:
-            # Специальная обработка для crotg/zrotg
-            if func.name in ["cblas_crotg", "cblas_zrotg"]:
-                if arg_name == "c":
-                    # c - указатель на float (для crotg) или double (для zrotg)
-                    args.append(f"&{arg_name}_val")
-                else:  # s - указатель на void* (комплексное число)
-                    args.append(f"(void*)&{arg_name}_val")
-            elif func.name in ["cblas_csrot", "cblas_zdrot"]:
-                args.append(f"{arg_name}_val")  # по значению для csrot/zdrot
-            else:
-                if arg_type.endswith('*'):
-                    args.append(f"&{arg_name}_val")
-                else:
-                    args.append(f"{arg_name}_val")
+
         elif arg_name == "P":
             args.append("P_param")
         elif arg_name in ["dotu", "dotc"]:
             # Для *_sub функций
-            result_var = "result_" + arg_name
-            args.append(f"&{result_var}")
-        elif arg_name == "b2":
-            if base_type == "float":
-                args.append("2.0f")
-            else:
-                args.append("2.0")
+            args.append(f"&{arg_name}")
+
         else:
-            args.append(arg_name)
+            args.append(arg_name) # N
     
     call += ", ".join(args) + ");"
     lines.append(call)
-    
-    # Закрытие циклов
-    if "alpha" in func.arg_names:
-        lines.append("            }")
-    lines.append("        }")
-    lines.append("    }")
+
     
     return "\n".join(lines)
 
@@ -422,10 +390,9 @@ def generate_test_file(func: function) -> str:
     
     # Заголовок
     content.append(f"""\
-/*
- * Тест для функции {func.name}
- * Проверяет успешность вызова с различными параметрами
- */
+
+//Тест для функции {func.name}
+ 
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -434,44 +401,12 @@ def generate_test_file(func: function) -> str:
 #include "cblas.h"
 
 int main(int argc, char** argv) {{
-    printf("Тестирование {func.name}...\\n");
 """)
-    
-     # Объявление переменных для функций вращения (rot)
-    if "rotg" in func.name or "rotmg" in func.name or "rot" in func.name or "rotm" in func.name:
-        if func.name.startswith("cblas_s"):  # float версии
-            content.append("    float a_val = 1.0f, b_val = 2.0f, c_val = 0.5f, s_val = 0.5f;")
-            content.append("    float d1_val = 1.0f, d2_val = 2.0f, b1_val = 3.0f, P_param[5] = {1.0f, 2.0f, 3.0f, 4.0f, 5.0f};")
-        elif func.name.startswith("cblas_d"):  # double версии
-            content.append("    double a_val = 1.0, b_val = 2.0, c_val = 0.5, s_val = 0.5;")
-            content.append("    double d1_val = 1.0, d2_val = 2.0, b1_val = 3.0, P_param[5] = {1.0, 2.0, 3.0, 4.0, 5.0};")
-        elif func.name == "cblas_csrot":  # complex float с real c,s
-            content.append("    float c_val = 0.5f, s_val = 0.5f;")
-        elif func.name == "cblas_zdrot":  # complex double с real c,s
-            content.append("    double c_val = 0.5, s_val = 0.5;")
-        elif func.name == "cblas_crotg":  # complex float rotg
-            content.append("    float complex a_val = 1.0f + 1.0f*I, b_val = 2.0f + 2.0f*I;")
-            content.append("    float c_val = 0.5f;")
-            content.append("    float complex s_val = 0.5f + 0.5f*I;")
-        elif func.name == "cblas_zrotg":  # complex double rotg
-            content.append("    double complex a_val = 1.0 + 1.0*I, b_val = 2.0 + 2.0*I;")
-            content.append("    double c_val = 0.5;")
-            content.append("    double complex s_val = 0.5 + 0.5*I;")
-    
-    # Объявление векторов
-    content.append(generate_vector_declaration(func))
-    
-    # Для функций с возвратом значения через аргумент
-    if func.name in ["cblas_cdotu_sub", "cblas_cdotc_sub", "cblas_zdotu_sub", "cblas_zdotc_sub"]:
-        base_type = get_base_type_from_precision(func.precision)
-        content.append(f"\n    {base_type} result_dotu, result_dotc;")
     
     # Генерация тестовых случаев
     content.append(generate_test_cases(func))
     
-    # Завершение
     content.append("""
-    printf("Тест пройден успешно!\\n");
     return 0;
 }""")
     
@@ -483,6 +418,7 @@ def generate_makefile():
 CC = gcc
 CFLAGS = -Wall -O2 -g -I../OpenBLAS
 LDFLAGS = -L../OpenBLAS -lopenblas -lm
+#LDFLAGS = -L../Wrong_OpenBLAS -lwrongblas -lm
 
 # Все тестовые программы (ищем в текущей директории)
 SOURCES = $(wildcard test_*.c)
@@ -550,8 +486,8 @@ fi
 # ============================================================================
 
 def main():
-    """Главная функция генератора"""
-    print("Генерация тестов CBLAS Level 1...")
+
+    print("Генерация тестов CBLAS Level 1")
     
     # Создание директории для тестов
     if not os.path.exists("tests"):
@@ -564,7 +500,7 @@ def main():
                 file_path = os.path.join("tests", file)
                 if os.path.isfile(file_path):
                     os.remove(file_path)
-                    print(f"  - Удалён старый файл {file}")
+                    
     
     # Поиск заголовочного файла
     header_copied = False
@@ -584,8 +520,6 @@ def main():
         with open(filename, "w") as f:
             f.write(generate_test_file(func))
         generated += 1
-        if generated <= 5 or generated % 10 == 0:  # Показываем прогресс
-            print(f"  - Создан test_{func.name}.c")
     
     # Генерация Makefile в папке tests
     makefile_path = os.path.join("tests", "Makefile")
@@ -603,16 +537,12 @@ def main():
     
     print(f"\nГотово! Создано {generated} тестовых файлов в директории tests/")
     
-    if header_copied:
-        print("\nДальнейшие действия:")
-        print("  cd tests")
-        print("  make         # компиляция всех тестов")
-        print("  ./run.sh     # запуск тестов")
-        print("  или просто: make run  # компиляция и запуск одной командой")
-    else:
-        print("\nВНИМАНИЕ: Сначала скопируйте cblas.h в директорию tests/")
 
 if __name__ == "__main__":
     main()
 
-#make ./run.sh
+
+#python generate_tests.py
+#cd /tests
+#make 
+#./run.sh

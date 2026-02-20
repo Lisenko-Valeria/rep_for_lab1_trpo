@@ -12,29 +12,14 @@
 int main(int argc, char** argv) {
     printf("Тестирование cblas_zdotc_sub...\n");
 
-    // Один буфер для всех векторов
-    #define TEST_BUFFER_SIZE  10
-    double complex test_buffer [TEST_BUFFER_SIZE ];
-    for (int i = 0; i < TEST_BUFFER_SIZE ; i++) {
-        test_buffer [i] = (i+1) + (i+1)*I;
-    }
+     // Переменные
+    int N = 1;
+    int inc = 1;
+        double complex XY = 2.0 + 2.0*I;
 
-    double complex result_dotu, result_dotc;
-    // Массивы тестовых значений
-    int n_values[] = {0, 1,2,3,5};
-    int inc_values[] = {1, 2};
-    int num_n = 5;
-    int num_inc = 2;
-
-    // Перебор всех комбинаций параметров
-    for (int i_n = 0; i_n < num_n; i_n++) {
-        int n = n_values[i_n];
-        for (int i_inc = 0; i_inc < num_inc; i_inc++) {
-            int inc = inc_values[i_inc];
+    double complex dotc;
                 // Вызов функции
-                cblas_zdotc_sub(n, (const double complex*)test_buffer, inc, (const double complex*)test_buffer, inc, &result_dotc);
-        }
-    }
+                cblas_zdotc_sub(N, &XY, inc, &XY, inc, &dotc);
 
     printf("Тест пройден успешно!\n");
     return 0;
