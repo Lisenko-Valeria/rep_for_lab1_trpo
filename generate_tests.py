@@ -277,10 +277,10 @@ def generate_test_cases(func: function) -> str:
         alpha_type = func.arg_types[1]
         if "void" in alpha_type:
             # Для комплексных функций с указателем
-            lines.append(f"        {base_type} alpha = 2.0{base_type_f} + 2.0{base_type_f}*I;")
+            lines.append(f"    {base_type} alpha = 2.0{base_type_f} + 2.0{base_type_f}*I;")
         else:
             # Для скалярных функций
-            lines.append(f"        {base_type} alpha = 2.0{base_type_f};")
+            lines.append(f"    {base_type} alpha = 2.0{base_type_f};")
     
     if "X" in func.arg_names or "Y" in func.arg_names:
         if "X" in func.arg_names:
@@ -292,9 +292,9 @@ def generate_test_cases(func: function) -> str:
 
         if "void" in XY_type:
             # Для комплексных функций 
-            lines.append(f"        {base_type} XY = 2.0{base_type_f} + 2.0{base_type_f}*I;")
+            lines.append(f"    {base_type} XY = 2.0{base_type_f} + 2.0{base_type_f}*I;")
         else:
-            lines.append(f"        {base_type} XY = 2.0{base_type_f};")
+            lines.append(f"    {base_type} XY = 2.0{base_type_f};")
     
     #с возвратом значения через аргумент
     if func.name in ["cblas_cdotu_sub", "cblas_zdotu_sub"]:
@@ -303,7 +303,7 @@ def generate_test_cases(func: function) -> str:
         lines.append(f"\n    {base_type} dotc;")   
 
     lines.append("                // Вызов функции")
-    call = f"                {func.name}("
+    call = f"    {func.name}("
     args = []
     
     for arg_name, arg_type in zip(func.arg_names, func.arg_types):
@@ -425,8 +425,6 @@ def main():
     if os.path.exists("tests"):
         shutil.rmtree("tests")
     os.makedirs("tests")
-
-    shutil.copy("OpenBLAS/cblas.h", "tests/cblas.h")
 
     generated = 0
     for func in FUNCTIONS:
