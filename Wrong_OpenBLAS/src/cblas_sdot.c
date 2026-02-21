@@ -1,6 +1,4 @@
 
-
-#include "/home/valeria/sem4/Trpo/rep_for_lab1_trpo/Wrong_OpenBLAS/include/cblas.h"
 #include <stdio.h>
 
 

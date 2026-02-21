@@ -1,267 +1,230 @@
 import os
 import shutil
 from dataclasses import dataclass
-from typing import List, Tuple, Optional
+from typing import List
 
 @dataclass
 class function:
-    name: str             
-    return_type: str          
+    name: str                      
     arg_types: List[str]         
-    arg_names: List[str]        
-    is_complex: bool = False       # флаг комплексной функции
-    is_return_void: bool = True    # функция возвращает void?
-    precision: str = "s"           # s/d/c/z/cs/zd/sc/dz/sds/ds
+    arg_names: List[str]             
+    precision: str = "s"          
 
 FUNCTIONS = [
-    function("cblas_sdsdot", "float", 
+    function("cblas_sdsdot", 
                   ["int", "float", "const float*", "int", "const float*", "int"],
                   ["N", "alpha", "X", "incX", "Y", "incY"],
-                  is_return_void=False, precision="sds"),
-    function("cblas_dsdot", "double",
+                  precision="sds"),
+    function("cblas_dsdot", 
                   ["int", "const float*", "int", "const float*", "int"],
                   ["N", "X", "incX", "Y", "incY"],
-                  is_return_void=False, precision="ds"),
-    function("cblas_sdot", "float",
+                  precision="ds"),
+    function("cblas_sdot", 
                   ["int", "const float*", "int", "const float*", "int"],
                   ["N", "X", "incX", "Y", "incY"],
-                  is_return_void=False, precision="s"),
-    function("cblas_ddot", "double",
+                  precision="s"),
+    function("cblas_ddot", 
                   ["int", "const double*", "int", "const double*", "int"],
                   ["N", "X", "incX", "Y", "incY"],
-                  is_return_void=False, precision="d"),
+                  precision="d"),
     # Functions having prefixes Z and C only
-    function("cblas_cdotu_sub", "void",
+    function("cblas_cdotu_sub", 
                   ["int", "const void*", "int", "const void*", "int", "void*"],
                   ["N", "X", "incX", "Y", "incY", "dotu"],
-                  is_complex=True, precision="c"),
-    function("cblas_cdotc_sub", "void",
+                  precision="c"),
+    function("cblas_cdotc_sub", 
                   ["int", "const void*", "int", "const void*", "int", "void*"],
                   ["N", "X", "incX", "Y", "incY", "dotc"],
-                  is_complex=True, precision="c"),
-    function("cblas_zdotu_sub", "void",
+                  precision="c"),
+    function("cblas_zdotu_sub", 
                   ["int", "const void*", "int", "const void*", "int", "void*"],
                   ["N", "X", "incX", "Y", "incY", "dotu"],
-                  is_complex=True, precision="z"),
-    function("cblas_zdotc_sub", "void",
+                  precision="z"),
+    function("cblas_zdotc_sub", 
                   ["int", "const void*", "int", "const void*", "int", "void*"],
                   ["N", "X", "incX", "Y", "incY", "dotc"],
-                  is_complex=True, precision="z"),
+                  precision="z"),
     #Functions having prefixes S D SC DZ
-    function("cblas_snrm2", "float",
+    function("cblas_snrm2", 
                   ["int", "const float*", "int"],
                   ["N", "X", "incX"],
-                  is_return_void=False, precision="s"),
-    function("cblas_sasum", "float",
+                  precision="s"),
+    function("cblas_sasum", 
                   ["int", "const float*", "int"],
                   ["N", "X", "incX"],
-                  is_return_void=False, precision="s"),
-    function("cblas_dnrm2", "double",
+                  precision="s"),
+    function("cblas_dnrm2", 
                   ["int", "const double*", "int"],
                   ["N", "X", "incX"],
-                  is_return_void=False, precision="d"),
-    function("cblas_dasum", "double",
+                  precision="d"),
+    function("cblas_dasum", 
                   ["int", "const double*", "int"],
                   ["N", "X", "incX"],
-                  is_return_void=False, precision="d"),
-    function("cblas_scnrm2", "float",
+                  precision="d"),
+    function("cblas_scnrm2", 
                   ["int", "const void*", "int"],
                   ["N", "X", "incX"],
-                  is_complex=True, is_return_void=False, precision="sc"),
-    function("cblas_scasum", "float",
+                  precision="sc"),
+    function("cblas_scasum", 
                   ["int", "const void*", "int"],
                   ["N", "X", "incX"],
-                  is_complex=True, is_return_void=False, precision="sc"),
-    function("cblas_dznrm2", "double",
+                  precision="sc"),
+    function("cblas_dznrm2", 
                   ["int", "const void*", "int"],
                   ["N", "X", "incX"],
-                  is_complex=True, is_return_void=False, precision="dz"),
-    function("cblas_dzasum", "double",
+                  precision="dz"),
+    function("cblas_dzasum", 
                   ["int", "const void*", "int"],
                   ["N", "X", "incX"],
-                  is_complex=True, is_return_void=False, precision="dz"),
+                  precision="dz"),
     #Functions having standard 4 prefixes (S D C Z)
-    function("cblas_isamax", "CBLAS_INDEX",
+    function("cblas_isamax", 
                   ["int", "const float*", "int"],
                   ["N", "X", "incX"],
-                  is_return_void=False, precision="s"),
-    function("cblas_idamax", "CBLAS_INDEX",
+                  precision="s"),
+    function("cblas_idamax", 
                   ["int", "const double*", "int"],
                   ["N", "X", "incX"],
-                  is_return_void=False, precision="d"),
-    function("cblas_icamax", "CBLAS_INDEX",
+                  precision="d"),
+    function("cblas_icamax", 
                   ["int", "const void*", "int"],
                   ["N", "X", "incX"],
-                  is_complex=True, is_return_void=False, precision="c"),
-    function("cblas_izamax", "CBLAS_INDEX",
+                  precision="c"),
+    function("cblas_izamax", 
                   ["int", "const void*", "int"],
                   ["N", "X", "incX"],
-                  is_complex=True, is_return_void=False, precision="z"),
+                  precision="z"),
     
     # Routines with standard 4 prefixes (s, d, c, z)
-    function("cblas_sswap", "void",
+    function("cblas_sswap", 
                   ["int", "float*", "int", "float*", "int"],
                   ["N", "X", "incX", "Y", "incY"],
                   precision="s"),
-    function("cblas_scopy", "void",
+    function("cblas_scopy", 
                   ["int", "const float*", "int", "float*", "int"],
                   ["N", "X", "incX", "Y", "incY"],
                   precision="s"),
-    function("cblas_saxpy", "void",
+    function("cblas_saxpy", 
                   ["int", "float", "const float*", "int", "float*", "int"],
                   ["N", "alpha", "X", "incX", "Y", "incY"],
                   precision="s"),
-    function("cblas_dswap", "void",
+    function("cblas_dswap", 
                   ["int", "double*", "int", "double*", "int"],
                   ["N", "X", "incX", "Y", "incY"],
                   precision="d"),
-    function("cblas_dcopy", "void",
+    function("cblas_dcopy", 
                   ["int", "const double*", "int", "double*", "int"],
                   ["N", "X", "incX", "Y", "incY"],
                   precision="d"),
-    function("cblas_daxpy", "void",
+    function("cblas_daxpy", 
                   ["int", "double", "const double*", "int", "double*", "int"],
                   ["N", "alpha", "X", "incX", "Y", "incY"],
                   precision="d"),
-    function("cblas_cswap", "void",
+    function("cblas_cswap", 
                   ["int", "void*", "int", "void*", "int"],
                   ["N", "X", "incX", "Y", "incY"],
-                  is_complex=True, precision="c"),
-    function("cblas_ccopy", "void",
+                  precision="c"),
+    function("cblas_ccopy", 
                   ["int", "const void*", "int", "void*", "int"],
                   ["N", "X", "incX", "Y", "incY"],
-                  is_complex=True, precision="c"),
-    function("cblas_caxpy", "void",
+                  precision="c"),
+    function("cblas_caxpy", 
                   ["int", "const void*", "const void*", "int", "void*", "int"],
                   ["N", "alpha", "X", "incX", "Y", "incY"],
-                  is_complex=True, precision="c"),
-    function("cblas_zswap", "void",
+                  precision="c"),
+    function("cblas_zswap", 
                   ["int", "void*", "int", "void*", "int"],
                   ["N", "X", "incX", "Y", "incY"],
-                  is_complex=True, precision="z"),
-    function("cblas_zcopy", "void",
+                  precision="z"),
+    function("cblas_zcopy", 
                   ["int", "const void*", "int", "void*", "int"],
                   ["N", "X", "incX", "Y", "incY"],
-                  is_complex=True, precision="z"),
-    function("cblas_zaxpy", "void",
+                  precision="z"),
+    function("cblas_zaxpy", 
                   ["int", "const void*", "const void*", "int", "void*", "int"],
                   ["N", "alpha", "X", "incX", "Y", "incY"],
-                  is_complex=True, precision="z"),
+                  precision="z"),
     
     #Routines with S and D prefix only
-    function("cblas_srotg", "void",
+    function("cblas_srotg", 
                   ["float*", "float*", "float*", "float*"],
                   ["a", "b", "c", "s"],
                   precision="s"),
-    function("cblas_srotmg", "void",
+    function("cblas_srotmg", 
                   ["float*", "float*", "float*", "float", "float*"],
                   ["d1", "d2", "b1", "b2", "P"],
                   precision="s"),
-    function("cblas_srot", "void",
+    function("cblas_srot", 
                   ["int", "float*", "int", "float*", "int", "float", "float"],
                   ["N", "X", "incX", "Y", "incY", "c", "s"],
                   precision="s"),
-    function("cblas_srotm", "void",
+    function("cblas_srotm", 
                   ["int", "float*", "int", "float*", "int", "const float*"],
                   ["N", "X", "incX", "Y", "incY", "P"],
                   precision="s"),
-    function("cblas_drotg", "void",
+    function("cblas_drotg", 
                   ["double*", "double*", "double*", "double*"],
                   ["a", "b", "c", "s"],
                   precision="d"),
-    function("cblas_drotmg", "void",
+    function("cblas_drotmg", 
                   ["double*", "double*", "double*", "double", "double*"],
                   ["d1", "d2", "b1", "b2", "P"],
                   precision="d"),
-    function("cblas_drot", "void",
+    function("cblas_drot", 
                   ["int", "double*", "int", "double*", "int", "double", "double"],
                   ["N", "X", "incX", "Y", "incY", "c", "s"],
                   precision="d"),
-    function("cblas_drotm", "void",
+    function("cblas_drotm", 
                   ["int", "double*", "int", "double*", "int", "const double*"],
                   ["N", "X", "incX", "Y", "incY", "P"],
                   precision="d"),
     #extra 4 
-    function("cblas_crotg", "void",
+    function("cblas_crotg", 
                   ["void*", "void*", "float*", "void*"],
                   ["a", "b", "c", "s"],
-                  is_complex=True, precision="c"),
-    function("cblas_zrotg", "void",
+                  precision="c"),
+    function("cblas_zrotg", 
                   ["void*", "void*", "double*", "void*"],
                   ["a", "b", "c", "s"],
-                  is_complex=True, precision="z"),
-    function("cblas_csrot", "void",
+                  precision="z"),
+    function("cblas_csrot", 
                 ["int", "void*", "int", "void*", "int", "float", "float"],
                 ["N", "X", "incX", "Y", "incY", "c", "s"],
-                is_complex=True, precision="cs"),
+                precision="cs"),
 
-    function("cblas_zdrot", "void",
+    function("cblas_zdrot", 
                 ["int", "void*", "int", "void*", "int", "double", "double"],
                 ["N", "X", "incX", "Y", "incY", "c", "s"],
-                is_complex=True, precision="zd"),
+                precision="zd"),
     
     #outines with S D C Z CS and ZD prefixes
-    function("cblas_sscal", "void",
+    function("cblas_sscal", 
                   ["int", "float", "float*", "int"],
                   ["N", "alpha", "X", "incX"],
                   precision="s"),
-    function("cblas_dscal", "void",
+    function("cblas_dscal", 
                   ["int", "double", "double*", "int"],
                   ["N", "alpha", "X", "incX"],
                   precision="d"),
-    function("cblas_cscal", "void",
+    function("cblas_cscal", 
                   ["int", "const void*", "void*", "int"],
                   ["N", "alpha", "X", "incX"],
-                  is_complex=True, precision="c"),
-    function("cblas_zscal", "void",
+                  precision="c"),
+    function("cblas_zscal", 
                   ["int", "const void*", "void*", "int"],
                   ["N", "alpha", "X", "incX"],
-                  is_complex=True, precision="z"),
-    function("cblas_csscal", "void",
+                  precision="z"),
+    function("cblas_csscal", 
                   ["int", "float", "void*", "int"],
                   ["N", "alpha", "X", "incX"],
-                  is_complex=True, precision="cs"),
-    function("cblas_zdscal", "void",
+                  precision="cs"),
+    function("cblas_zdscal", 
                   ["int", "double", "void*", "int"],
                   ["N", "alpha", "X", "incX"],
-                  is_complex=True, precision="zd"),
-    
+                  precision="zd"),
 ]
 
-TEMPLATE = """\
-#include <stdio.h>
-#include <stdlib.h>
-#include <math.h>
-#include <complex.h>
-#include "cblas.h"
-
-// Тестовые данные для разных случаев
-#define TEST_N_VALUES { 0, 5, 3, 1, 7 }
-#define TEST_INC_VALUES { 1, 2, -1, 0 }
-#define TEST_ALPHA_FLOAT { 0.0f, 1.0f, -2.5f, 0.5f }
-#define TEST_ALPHA_DOUBLE { 0.0, 1.0, -2.5, 0.5 }
-"""
-
-# Префиксы и соответствующие типы
-TYPE_INFO = {
-    "s": {"c_type": "float", "c_type_str": "float", "complex": False},
-    "d": {"c_type": "double", "c_type_str": "double", "complex": False},
-    "c": {"c_type": "float complex", "c_type_str": "float", "complex": True},
-    "z": {"c_type": "double complex", "c_type_str": "double", "complex": True},
-    "sc": {"c_type": "float complex", "c_type_str": "float", "complex": True},
-    "dz": {"c_type": "double complex", "c_type_str": "double", "complex": True},
-    "cs": {"c_type": "float complex", "c_type_str": "float", "complex": True},
-    "zd": {"c_type": "double complex", "c_type_str": "double", "complex": True},
-    "sds": {"c_type": "float", "c_type_str": "float", "complex": False},  # специальный случай
-    "ds": {"c_type": "float", "c_type_str": "float", "complex": False},   # специальный случай
-}
-
-# ============================================================================
-# Генератор тестов
-# ============================================================================
-
 def get_base_type_from_precision(precision: str) -> str:
-    """Определяет базовый тип для заданной точности"""
     if precision in ["s", "sds", "ds"]:
         return "float"
     elif precision in ["d"]:
@@ -270,19 +233,17 @@ def get_base_type_from_precision(precision: str) -> str:
         return "float complex"
     elif precision in ["z", "dz", "zd"]:
         return "double complex"
-    return "float"
 
 def generate_test_cases(func: function) -> str:
-    """Генерирует код с тестовыми случаями"""
+
     lines = []
     
-    # Определение базового типа
     base_type = get_base_type_from_precision(func.precision)
     if "float" in base_type :
         base_type_f = "f"
     elif "double" in base_type:
         base_type_f = "" 
-    base_type_simple = base_type.split()[0]  # "float" или "double"
+    base_type_simple = base_type.split()[0]  # float/double
 
     
     # ПЕРЕМЕННЫЕ
@@ -313,9 +274,7 @@ def generate_test_cases(func: function) -> str:
 
     # Объявление переменных alpha для функций axpy scal
     if "alpha" in func.arg_names:
-        alpha_idx = func.arg_names.index("alpha")
-        alpha_type = func.arg_types[alpha_idx]
-#упростить  ?
+        alpha_type = func.arg_types[1]
         if "void" in alpha_type:
             # Для комплексных функций с указателем
             lines.append(f"        {base_type} alpha = 2.0{base_type_f} + 2.0{base_type_f}*I;")
@@ -332,19 +291,17 @@ def generate_test_cases(func: function) -> str:
             XY_type = func.arg_types[Y_idx] 
 
         if "void" in XY_type:
-            # Для комплексных функций с указателем
+            # Для комплексных функций 
             lines.append(f"        {base_type} XY = 2.0{base_type_f} + 2.0{base_type_f}*I;")
         else:
-            # Для скалярных функций
             lines.append(f"        {base_type} XY = 2.0{base_type_f};")
     
-    # Для функций с возвратом значения через аргумент
+    #с возвратом значения через аргумент
     if func.name in ["cblas_cdotu_sub", "cblas_zdotu_sub"]:
         lines.append(f"\n    {base_type} dotu;")    
     elif func.name in ["cblas_cdotc_sub", "cblas_zdotc_sub"]:
         lines.append(f"\n    {base_type} dotc;")   
 
-    # Вызов функции
     lines.append("                // Вызов функции")
     call = f"                {func.name}("
     args = []
@@ -376,7 +333,7 @@ def generate_test_cases(func: function) -> str:
             args.append(f"&{arg_name}")
 
         else:
-            args.append(arg_name) # N
+            args.append(arg_name) 
     
     call += ", ".join(args) + ");"
     lines.append(call)
@@ -385,10 +342,8 @@ def generate_test_cases(func: function) -> str:
     return "\n".join(lines)
 
 def generate_test_file(func: function) -> str:
-    """Генерирует полный код тестового файла для одной функции"""
     content = []
     
-    # Заголовок
     content.append(f"""\
 
 //Тест для функции {func.name}
@@ -403,7 +358,6 @@ def generate_test_file(func: function) -> str:
 int main(int argc, char** argv) {{
 """)
     
-    # Генерация тестовых случаев
     content.append(generate_test_cases(func))
     
     content.append("""
@@ -413,51 +367,41 @@ int main(int argc, char** argv) {{
     return "\n".join(content)
 
 def generate_makefile():
-    """Генерирует Makefile для компиляции всех тестов (для размещения в папке tests)"""
     return """\
-CC = gcc
-CFLAGS = -Wall -O2 -g -I../OpenBLAS
+CFLAGS = -Wall -I../OpenBLAS
+#CFLAGS = -Wall -I../Wrong_OpenBLAS/include  #и удалить cblas bp ntcnjd
+
 LDFLAGS = -L../OpenBLAS -lopenblas -lm
 #LDFLAGS = -L../Wrong_OpenBLAS -lwrongblas -lm
 
-# Все тестовые программы (ищем в текущей директории)
-SOURCES = $(wildcard test_*.c)
-TARGETS = $(SOURCES:.c=)
+C_FILES = $(wildcard test_*.c)
+#C_FILES = test_cblas_drot.c test_cblas_dswap.c test_cblas_saxpy.c test_cblas_sdot.c test_cblas_zdotc_sub.c
 
-all: $(TARGETS)
+EXECS = $(C_FILES:.c=)
+
+all: $(EXECS)
 
 %: %.c
-	$(CC) $(CFLAGS) -o $@ $< $(LDFLAGS)
+	gcc $(CFLAGS) -o $@ $< $(LDFLAGS)
 
 clean:
-	rm -f $(TARGETS)
+	rm -f $(EXECS)
 
-run: all
-	@echo "Запуск всех тестов..."
-	@for test in $(TARGETS); do \\
-		echo -n "Запуск $$test ... "; \\
-		./$$test > /dev/null 2>&1 && echo "УСПЕХ" || echo "ПРОВАЛ"; \\
-	done
-
-.PHONY: all clean run
 """
 
 def generate_run_script():
-    """Генерирует скрипт для запуска тестов (для размещения в папке tests)"""
     return """\
-#!/bin/bash
-
 echo "Запуск всех тестов CBLAS Level 1"
-echo "================================"
 echo
 
 FAILED=0
 PASSED=0
 
 for test in test_*; do
-    # Пропускаем если это не исполняемый файл или это исходный код
+#for test in "test_cblas_drot" "test_cblas_dswap" "test_cblas_saxpy" "test_cblas_sdot" "test_cblas_zdotc_sub"; do
+
     if [ -x "$test" ] && [ ! "${test##*.}" = "c" ] && [ ! "${test##*.}" = "sh" ]; then
-        echo -n "Запуск $test ... "
+        echo -n "ТЕСТ $test   -   "
         ./$test > /dev/null 2>&1
         if [ $? -eq 0 ]; then
             echo "УСПЕХ"
@@ -470,72 +414,34 @@ for test in test_*; do
 done
 
 echo
-echo "Результаты: Пройдено: $PASSED, Провалено: $FAILED"
+echo "Пройдено: $PASSED, Провалено: $FAILED"
 
-if [ $FAILED -eq 0 ]; then
-    echo "ИТОГО: УСПЕХ"
-    exit 0
-else
-    echo "ИТОГО: ПРОВАЛ"
-    exit 1
-fi
 """
-
-# ============================================================================
-# Основная функция
-# ============================================================================
 
 def main():
 
     print("Генерация тестов CBLAS Level 1")
     
-    # Создание директории для тестов
-    if not os.path.exists("tests"):
-        os.makedirs("tests")
-        print("  - Создана директория tests/")
-    else:
-        # Очистка старых тестов
-        for file in os.listdir("tests"):
-            if file.startswith("test_") and (file.endswith(".c") or not os.path.splitext(file)[1]):
-                file_path = os.path.join("tests", file)
-                if os.path.isfile(file_path):
-                    os.remove(file_path)
-                    
-    
-    # Поиск заголовочного файла
-    header_copied = False
-    openblas_header = os.path.join("OpenBLAS", "cblas.h")
-    if os.path.exists(openblas_header):
-        shutil.copy(openblas_header, "tests/cblas.h")
-        print("  - cblas.h скопирован из OpenBLAS/ в tests/")
-        header_copied = True
-    else:
-        print("  ! ВНИМАНИЕ: cblas.h не найден! Тесты могут не скомпилироваться.")
-        print("    Убедитесь, что файл cblas.h есть в текущей директории.")
-    
-    # Генерация тестов для каждой функции
+    if os.path.exists("tests"):
+        shutil.rmtree("tests")
+    os.makedirs("tests")
+
+    shutil.copy("OpenBLAS/cblas.h", "tests/cblas.h")
+
     generated = 0
     for func in FUNCTIONS:
-        filename = os.path.join("tests", f"test_{func.name}.c")
-        with open(filename, "w") as f:
+        with open(f"tests/test_{func.name}.c", "w") as f:
             f.write(generate_test_file(func))
         generated += 1
     
-    # Генерация Makefile в папке tests
-    makefile_path = os.path.join("tests", "Makefile")
-    with open(makefile_path, "w") as f:
+    with open("tests/Makefile", "w") as f:
         f.write(generate_makefile())
-    print("  - Создан tests/Makefile")
-    
-    # Генерация скрипта запуска в папке tests
-    runscript_path = os.path.join("tests", "run.sh")
-    with open(runscript_path, "w") as f:
+    with open("tests/run.sh", "w") as f:
         f.write(generate_run_script())
-    # Делаем скрипт исполняемым
-    os.chmod(runscript_path, 0o755)
-    print("  - Создан tests/run.sh")
+
+    os.chmod("tests/run.sh", 0o755)
     
-    print(f"\nГотово! Создано {generated} тестовых файлов в директории tests/")
+    print(f"Создано {generated} тестовых файлов в директории tests/")
     
 
 if __name__ == "__main__":
