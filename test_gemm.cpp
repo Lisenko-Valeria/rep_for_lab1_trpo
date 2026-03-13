@@ -39,9 +39,7 @@ double geometric_mean(const vector<double>& values) {
     return exp(sum_log / values.size());
 }
 
-TestTimes run_test_with_blas(const string& name, int m, int n, int k, int repeat_count) {
-    cout << "\n"<< name << " " << m << "x" << n << "x" << k << " (m,n,k):\n";
-    
+TestTimes run_test_with_blas(const string& name, int m, int n, int k, int repeat_count) {    
     int lda_my = m, ldb_my = k, ldc_my = m;
     int lda_blas = k, ldb_blas = n, ldc_blas = n;  
     int sizeA = m * k, sizeB = k * n, sizeC = m * n;
@@ -52,7 +50,7 @@ TestTimes run_test_with_blas(const string& name, int m, int n, int k, int repeat
     
     Timer timer;
     TestTimes result;
-    
+        
     for (int r = 0; r < repeat_count; r++) {
         fill(C_my.begin(), C_my.end(), 0);
         timer.start();
@@ -66,47 +64,69 @@ TestTimes run_test_with_blas(const string& name, int m, int n, int k, int repeat
                     m, n, k, 1.0f, A.data(), lda_blas,
                     B.data(), ldb_blas, 0.0f, C_blas.data(), ldc_blas);
         result.blas_times.push_back(timer.elapsed_seconds());
+        
     }
     return result;
 }
 
 void print_results_with_geom(const string& name, const TestTimes& times) {
-    cout << "Результаты: " << name << "\n";
-    printf("%s  | %s    | %s   | %s\n", "Run", "Моя (сек)", "BLAS (сек)", "BLAS/Моя");
+    cout << "Результат: " << name << "\n";
+    printf("%4s | %12s | %12s | %12s\n", "Run", "Моя (сек)", "BLAS (сек)", "% от BLAS");
     
-    vector<double> ratios;
+    vector<double> percents;
+    
     for (size_t i = 0; i < times.my_times.size(); i++) {
-        double ratio = times.blas_times[i] / times.my_times[i];
-        ratios.push_back(ratio);
-        printf("%4zu | %12.4f | %12.4f | %12.2f\n", 
-               i+1, times.my_times[i], times.blas_times[i], ratio);
+        // Относительная производительность в процентах от OpenBLAS
+        // Показывает, насколько моя реализация медленнее BLAS
+        double percent = (times.blas_times[i] / times.my_times[i]) * 100.0;
+        percents.push_back(percent);
+        printf("%4zu | %12.4f | %12.4f | %11.2f%%\n", 
+               i+1, times.my_times[i], times.blas_times[i], percent);
     }
     
+    double geom_percent = geometric_mean(percents);
+    printf("\nСреднее геометрическое %% от BLAS: %.2f%%\n", geom_percent);
+}
+
+void run_thread_test(int m, int n, int k, int repeat_count) {
+    cout << "\nМногопоточное тестирование\n";
     
-    // Среднее арифметическое
-    double sum_my = 0, sum_blas = 0;
-    for (size_t i = 0; i < times.my_times.size(); i++) {
-        sum_my += times.my_times[i];
-        sum_blas += times.blas_times[i];
+    vector<int> thread_counts = {1, 2, 4, 8, 16};
+    
+    for (int num_threads : thread_counts) {
+        openblas_set_num_threads(num_threads);
+        
+        cout << "\nРезультаты для " << num_threads << " потоков:\n";
+        printf("%4s | %12s | %12s | %12s\n", "Run", "Моя (сек)", "BLAS (сек)", "% от BLAS");        
+        vector<double> percents;
+        
+        TestTimes times = run_test_with_blas("Thread test", m, n, k, repeat_count);
+        
+        for (size_t i = 0; i < times.my_times.size(); i++) {
+            // Относительная производительность в процентах от OpenBLAS
+            double percent = (times.blas_times[i] / times.my_times[i]) * 100.0;
+            percents.push_back(percent);
+            printf("%4zu | %12.4f | %12.4f | %11.2f%%\n", 
+                   i+1, times.my_times[i], times.blas_times[i], percent);
+        }
+                
     }
-    double mean_my = sum_my / times.my_times.size();
-    double mean_blas = sum_blas / times.blas_times.size();
     
-    // Среднее геометрическое отношений
-    double geom_mean_ratio = geometric_mean(ratios);
-    
-    printf("\n");
-    printf("Среднее арифметическое:\n");
-    printf("  Моя реализация: %.4f сек\n", mean_my);
-    printf("  OpenBLAS: %.4f сек\n", mean_blas);
-    printf("  Отношение (BLAS/моя): %.2f\n", mean_blas / mean_my);
-    printf("\n");
-    printf("Среднее геометрическое отношений (BLAS/моя): %.2f\n", geom_mean_ratio);
+    openblas_set_num_threads(1);
 }
 
 int main() {
-    auto times = run_test_with_blas("Тест", 3000, 3000, 3000, 10);
-    print_results_with_geom("3000x3000x3000", times);
+    
+    try {
+        auto times = run_test_with_blas("Тест", 3000, 3000, 3000, 10);
+        print_results_with_geom("1000x1000x1000", times);
+        
+        run_thread_test(3000, 3000, 3000, 10);
+        
+    } catch (const exception& e) {
+        cerr << "Ошибка: " << e.what() << endl;
+        return 1;
+    }
     
     return 0;
 }
