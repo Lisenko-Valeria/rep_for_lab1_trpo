@@ -76,8 +76,7 @@ void print_results_with_geom(const string& name, const TestTimes& times) {
     vector<double> percents;
     
     for (size_t i = 0; i < times.my_times.size(); i++) {
-        // Относительная производительность в процентах от OpenBLAS
-        // Показывает, насколько моя реализация медленнее BLAS
+
         double percent = (times.blas_times[i] / times.my_times[i]) * 100.0;
         percents.push_back(percent);
         printf("%4zu | %12.4f | %12.4f | %11.2f%%\n", 
@@ -103,13 +102,14 @@ void run_thread_test(int m, int n, int k, int repeat_count) {
         TestTimes times = run_test_with_blas("Thread test", m, n, k, repeat_count);
         
         for (size_t i = 0; i < times.my_times.size(); i++) {
-            // Относительная производительность в процентах от OpenBLAS
             double percent = (times.blas_times[i] / times.my_times[i]) * 100.0;
             percents.push_back(percent);
             printf("%4zu | %12.4f | %12.4f | %11.2f%%\n", 
                    i+1, times.my_times[i], times.blas_times[i], percent);
         }
-                
+        
+        double geom_percent = geometric_mean(percents);
+        printf("\nСреднее геом. %%: %.2f%%\n", geom_percent);
     }
     
     openblas_set_num_threads(1);
@@ -119,7 +119,7 @@ int main() {
     
     try {
         auto times = run_test_with_blas("Тест", 3000, 3000, 3000, 10);
-        print_results_with_geom("1000x1000x1000", times);
+        print_results_with_geom("3000x3000x3000", times);
         
         run_thread_test(3000, 3000, 3000, 10);
         
@@ -128,5 +128,5 @@ int main() {
         return 1;
     }
     
-    return 0;
+    return 0; 
 }
