@@ -32,6 +32,13 @@ struct TestTimes {
     vector<double> blas_times;
 };
 
+double geometric_mean(const vector<double>& values) {
+    if (values.empty()) return 0.0;
+    double sum_log = 0.0;
+    for (double v : values) sum_log += log(v);
+    return exp(sum_log / values.size());
+}
+
 TestTimes run_test_with_blas(const string& name, int m, int n, int k, int repeat_count) {
     cout << "\n"<< name << " " << m << "x" << n << "x" << k << " (m,n,k):\n";
     
@@ -63,22 +70,43 @@ TestTimes run_test_with_blas(const string& name, int m, int n, int k, int repeat
     return result;
 }
 
+void print_results_with_geom(const string& name, const TestTimes& times) {
+    cout << "Результаты: " << name << "\n";
+    printf("%s  | %s    | %s   | %s\n", "Run", "Моя (сек)", "BLAS (сек)", "BLAS/Моя");
+    
+    vector<double> ratios;
+    for (size_t i = 0; i < times.my_times.size(); i++) {
+        double ratio = times.blas_times[i] / times.my_times[i];
+        ratios.push_back(ratio);
+        printf("%4zu | %12.4f | %12.4f | %12.2f\n", 
+               i+1, times.my_times[i], times.blas_times[i], ratio);
+    }
+    
+    
+    // Среднее арифметическое
+    double sum_my = 0, sum_blas = 0;
+    for (size_t i = 0; i < times.my_times.size(); i++) {
+        sum_my += times.my_times[i];
+        sum_blas += times.blas_times[i];
+    }
+    double mean_my = sum_my / times.my_times.size();
+    double mean_blas = sum_blas / times.blas_times.size();
+    
+    // Среднее геометрическое отношений
+    double geom_mean_ratio = geometric_mean(ratios);
+    
+    printf("\n");
+    printf("Среднее арифметическое:\n");
+    printf("  Моя реализация: %.4f сек\n", mean_my);
+    printf("  OpenBLAS: %.4f сек\n", mean_blas);
+    printf("  Отношение (BLAS/моя): %.2f\n", mean_blas / mean_my);
+    printf("\n");
+    printf("Среднее геометрическое отношений (BLAS/моя): %.2f\n", geom_mean_ratio);
+}
+
 int main() {
     auto times = run_test_with_blas("Тест", 3000, 3000, 3000, 10);
-    
-    cout << "\nРезультаты (mine    | BLAS):\n";
-    double total_my = 0, total_blas = 0;
-    for (size_t i = 0; i < times.my_times.size(); i++) {
-        printf("  Run %zu: %.4f сек | %.4f сек\n", 
-               i+1, times.my_times[i], times.blas_times[i]);
-        total_my += times.my_times[i];
-        total_blas += times.blas_times[i];
-    }
-    printf("\nСреднее время:\n");
-    printf("  Моя реализация: %.4f сек\n", total_my / times.my_times.size());
-    printf("  OpenBLAS: %.4f сек\n", total_blas / times.blas_times.size());
-    printf("  Отношение (BLAS/моя): %.2f\n", 
-           (total_blas / times.blas_times.size()) / (total_my / times.my_times.size()));
+    print_results_with_geom("3000x3000x3000", times);
     
     return 0;
 }
